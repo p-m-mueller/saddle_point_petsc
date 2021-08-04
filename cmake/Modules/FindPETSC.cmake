@@ -1,0 +1,23 @@
+find_package(PkgConfig REQUIRED QUIET)
+
+pkg_check_modules(PC_PETSC QUIET petsc)
+set(PETSC_DEFINITIONS ${PC_PETSC_CFLAGS_OTHER})
+
+find_path(PETSC_INCLUDE_DIR petscconf.h
+	HINTS ${PC_PETSC_INCLUDEDIR} ${PC_PETSC_INCLUDE_DIRS}
+	PATH_SUFFIXES petsc
+)
+
+find_library(PETSC_LIBRARY NAMES petsc libpetsc
+	HINTS ${PC_PETSC_LIBDIR} ${PC_PETSC_LIBRARY_DIRS}
+)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(PETSC DEFAULT_MSG
+	PETSC_LIBRARY PETSC_INCLUDE_DIR
+)
+
+mark_as_advanced(PETSC_INCLUDE_DIR PETSC_LIBRARY)
+
+set(PETSC_LIBRARIES ${PETSC_LIBRARY})
+set(PETSC_INCLUDE_DIRS ${PETSC_INCLUDE_DIR})
