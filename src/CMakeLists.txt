@@ -3,6 +3,7 @@ file(GLOB sources *.c)
 add_executable(saddle_point_run ${sources})
 
 target_link_libraries(saddle_point_run PUBLIC
+	m
 	MPI::MPI_C
 	${PETSC_LIBRARIES}
 )
