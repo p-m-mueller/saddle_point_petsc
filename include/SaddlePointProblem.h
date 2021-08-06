@@ -2,7 +2,7 @@
 #define _SADDLEPOINTPROBLEM_H_
 
 #include <petsc.h>
-#include "Meshfunctions.h"
+#include "Mesh.h"
 
 typedef struct
 {
