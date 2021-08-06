@@ -4,11 +4,7 @@
 #include <petsc.h>
 #include "Mesh.h"
 
-typedef struct
-{
-	PetscScalar uu, tt;
-}AppCtx;
 
-PetscErrorCode solveSaddlePointProblem(PetscInt, PetscInt);
+PetscErrorCode solveConstraintLaplaceProblem(DM, Vec *);
 
 #endif
