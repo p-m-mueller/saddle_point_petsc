@@ -1,29 +1,28 @@
-#include "Mesh.h"
+#include "Discretization.h"
 
-PetscErrorCode setupMesh(PetscInt nx, PetscInt ny, GridContainer *gc)
+PetscErrorCode SetupDMs(PetscInt nx, PetscInt ny, DM *da_u, DM *da_prop)
 {
-	DM		da_u = gc->da_u
-	DM		da_prop = gc->da_prop;
-
+	const PetscInt 	dof_u = 2;
 	PetscInt	nProc_x, nProc_y;
 	PetscInt	*lx, *ly;
+	PetscInt	prop_dof, prop_stencil_width;
 	PetscInt	i, j, k;
+	PetscErrorCode	ierr;
 
-	ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX, nx+1, ny+1, PETSC_DECIDE, PETSC_DECIDE, dof_u, 1, NULL, NULL, &da_u); CHKERRQ(ierr);
-	ierr = DMSetMatType(da_u, MATAIJ); CHKERRQ(ierr);
-	ierr = DMSetFromOptions(da_u); CHKERRQ(ierr);
-	ierr = DMSetUp(da_u); CHKERRQ(ierr);
+	ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX, nx+1, ny+1, PETSC_DECIDE, PETSC_DECIDE, dof_u, 1, NULL, NULL, da_u); CHKERRQ(ierr);
+	ierr = DMSetMatType(*da_u, MATAIJ); CHKERRQ(ierr);
+	ierr = DMSetFromOptions(*da_u); CHKERRQ(ierr);
+	ierr = DMSetUp(*da_u); CHKERRQ(ierr);
 
-	ierr = DMDASetFieldName(da_u, 0, "Ux"); CHKERRQ(ierr);
-	ierr = DMDASetFieldName(da_u, 1, "Uy"); CHKERRQ(ierr);
-	ierr = DMDASetUniformCoordinates(da_u, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0); CHKERRQ(ierr);
+	ierr = DMDASetFieldName(*da_u, 0, "Ux"); CHKERRQ(ierr);
+	ierr = DMDASetFieldName(*da_u, 1, "Uy"); CHKERRQ(ierr);
+	ierr = DMDASetUniformCoordinates(*da_u, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0); CHKERRQ(ierr);
 
-	ierr = DMDAGetInfo(da_u, 0, 0, 0, 0, &nProc_x, &nProc_y, 0, 0, 0, 0, 0, 0, 0); CHKERRQ(ierr);
-	ierr = GetElementOwnershipRanges2d(da_u, &lx, &ly); CHKERRQ(ierr);
+	ierr = DMDAGetInfo(*da_u, 0, 0, 0, 0, &nProc_x, &nProc_y, 0, 0, 0, 0, 0, 0, 0); CHKERRQ(ierr);
+	ierr = GetElementOwnershipRanges2d(*da_u, &lx, &ly); CHKERRQ(ierr);
 
-	ierr = GetElementProperties2d(da_u, &da_prop); 	
+	prop_dof = (PetscInt)(sizeof(GaussPointCoefficients) / sizeof(PetscScalar));
 
-	ierr =  DMDestroy(&da_u); CHKERRQ(ierr);
 	return ierr;
 }
 

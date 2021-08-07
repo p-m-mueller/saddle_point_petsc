@@ -2,9 +2,10 @@
 #define _SADDLEPOINTPROBLEM_H_
 
 #include <petsc.h>
-#include "Mesh.h"
+#include "Discretization.h"
 
+PetscErrorCode SolveSaddlePointProblem(PetscInt, PetscInt); 
 
-PetscErrorCode solveConstraintLaplaceProblem(DM, Vec *);
+PetscErrorCode SolveConstraintLaplaceProblem(DM, DM, Vec *);
 
 #endif

@@ -1,20 +1,21 @@
 #include "SaddlePointProblem.h"
 
-PetscErrorCode solveSaddlePointProblem(PetscInt nx, PetscInt ny)
+
+PetscErrorCode SolveSaddlePointProblem(PetscInt nx, PetscInt ny)
 {
-	DM		da;
+	DM		da_u, da_prop;
 	Vec		u;
 	PetscErrorCode 	ierr;
 
-	ierr = setupMesh(nx, ny, &da); CHKERRQ(ierr);
-	ierr = solveConstraintLaplaceProblem(da, &u); CHKERRQ(ierr);
+	ierr = SetupDMs(nx, ny, &da_u, &da_prop); CHKERRQ(ierr);
+
+	ierr = SolveConstraintLaplaceProblem(da_u, da_prop, &u); CHKERRQ(ierr);
 
 	return ierr;
 }
 
 
-
-PetscErrorCode solveConstraintLaplaceProblem(DM da, Vec *u)
+PetscErrorCode SolveConstraintLaplaceProblem(DM da_u, DM da_prop, Vec *u)
 {
 	KSP		ksp;
 	PetscErrorCode 	ierr;

@@ -7,13 +7,6 @@
 
 typedef struct
 {
-	DM 	da_u;
-	DM	da_prop;
-	const PetscInt 	dof_u = 2;
-};
-
-typedef struct
-{
 	PetscInt i, j;
 }Index2d;
 
@@ -25,9 +18,7 @@ typedef struct
 	PetscScalar	fy[GAUSS_POINTS];
 }GaussPointCoefficients;
 
-PetscErrorCode setupMesh(PetscInt, PetscInt, DM *);
-
-PetscErrorcode freeMesh(
+PetscErrorCode SetupDMs(PetscInt, PetscInt, DM *, DM *);
 
 PetscErrorCode GetElementOwnershipRanges2d(DM, PetscInt**, PetscInt**); 
 
