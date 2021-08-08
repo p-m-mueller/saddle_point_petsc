@@ -6,9 +6,14 @@ PetscErrorCode SetupDMs(PetscInt nx, PetscInt ny, DM *da_u, DM *da_prop)
 	PetscInt	nProc_x, nProc_y;
 	PetscInt	*lx, *ly;
 	PetscInt	prop_dof, prop_stencil_width;
+	PetscInt	M, N;
+	PetscReal	dx, dy;
 	PetscInt	i, j, k;
 	PetscErrorCode	ierr;
 
+	/*
+	 * Create the da for u
+	 */
 	ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX, nx+1, ny+1, PETSC_DECIDE, PETSC_DECIDE, dof_u, 1, NULL, NULL, da_u); CHKERRQ(ierr);
 	ierr = DMSetMatType(*da_u, MATAIJ); CHKERRQ(ierr);
 	ierr = DMSetFromOptions(*da_u); CHKERRQ(ierr);
@@ -18,11 +23,26 @@ PetscErrorCode SetupDMs(PetscInt nx, PetscInt ny, DM *da_u, DM *da_prop)
 	ierr = DMDASetFieldName(*da_u, 1, "Uy"); CHKERRQ(ierr);
 	ierr = DMDASetUniformCoordinates(*da_u, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0); CHKERRQ(ierr);
 
+	/*
+	 * Generate element properties
+	 */
 	ierr = DMDAGetInfo(*da_u, 0, 0, 0, 0, &nProc_x, &nProc_y, 0, 0, 0, 0, 0, 0, 0); CHKERRQ(ierr);
 	ierr = GetElementOwnershipRanges2d(*da_u, &lx, &ly); CHKERRQ(ierr);
 
 	prop_dof = (PetscInt)(sizeof(GaussPointCoefficients) / sizeof(PetscScalar));
+	prop_stencil_width = 0;
+	ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX, nx, ny, nProc_x, nProc_y, prop_dof, prop_stencil_width, lx, ly, da_prop); CHKERRQ(ierr);
+	ierr = DMSetFromOptions(*da_prop); CHKERRQ(ierr); 
+	ierr = DMSetUp(*da_prop); CHKERRQ(ierr); 
+	ierr = PetscFree(lx); CHKERRQ(ierr);
+	ierr = PetscFree(ly); CHKERRQ(ierr);
 
+	ierr = DMDAGetInfo(*da_prop, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); CHKERRQ(ierr);
+	dx = 1.0 / (PetscReal)M;	
+	dy = 1.0 / (PetscReal)N;
+	ierr = DMDASetUniformCoordinates(*da_prop, 0.0 + 0.5 * dx, 1.0 - 0.5 * dx, 0.0 + 0.5 * dy, 1.0 - 0.5 * dy, 0.0, 0.0); CHKERRQ(ierr); 
+
+	
 	return ierr;
 }
 
