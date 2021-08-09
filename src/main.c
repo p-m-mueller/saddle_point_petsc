@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 
 	ierr = PetscInitialize(&argc, &argv, (char*)0, help); if (ierr) return ierr;	
 
-	Nx = 11; Ny = 9;
+	Nx = 5; Ny = 3;
 	ierr = SolveSaddlePointProblem(Nx, Ny); CHKERRQ(ierr);
 
 	ierr = PetscFinalize(); CHKERRQ(ierr);

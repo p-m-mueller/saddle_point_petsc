@@ -8,6 +8,12 @@ PetscErrorCode SetupDMs(PetscInt nx, PetscInt ny, DM *da_u, DM *da_prop)
 	PetscInt	prop_dof, prop_stencil_width;
 	PetscInt	M, N;
 	PetscReal	dx, dy;
+	ElementProperties	**elementProperties;
+	Vec		properties, l_properties;
+	DM		prop_cda, u_cda;
+	Vec		prop_coords, u_coords;
+	DMDACoor2d	**_prop_coords, **_u_coords;
+	PetscInt	si, sj, ni, nj;
 	PetscInt	i, j, k;
 	PetscErrorCode	ierr;
 
@@ -29,7 +35,7 @@ PetscErrorCode SetupDMs(PetscInt nx, PetscInt ny, DM *da_u, DM *da_prop)
 	ierr = DMDAGetInfo(*da_u, 0, 0, 0, 0, &nProc_x, &nProc_y, 0, 0, 0, 0, 0, 0, 0); CHKERRQ(ierr);
 	ierr = GetElementOwnershipRanges2d(*da_u, &lx, &ly); CHKERRQ(ierr);
 
-	prop_dof = (PetscInt)(sizeof(GaussPointCoefficients) / sizeof(PetscScalar));
+	prop_dof = (PetscInt)(sizeof(ElementProperties) / sizeof(PetscScalar));
 	prop_stencil_width = 0;
 	ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX, nx, ny, nProc_x, nProc_y, prop_dof, prop_stencil_width, lx, ly, da_prop); CHKERRQ(ierr);
 	ierr = DMSetFromOptions(*da_prop); CHKERRQ(ierr); 
@@ -37,12 +43,75 @@ PetscErrorCode SetupDMs(PetscInt nx, PetscInt ny, DM *da_u, DM *da_prop)
 	ierr = PetscFree(lx); CHKERRQ(ierr);
 	ierr = PetscFree(ly); CHKERRQ(ierr);
 
+	// Setup centroid coordiantes
 	ierr = DMDAGetInfo(*da_prop, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); CHKERRQ(ierr);
 	dx = 1.0 / (PetscReal)M;	
 	dy = 1.0 / (PetscReal)N;
 	ierr = DMDASetUniformCoordinates(*da_prop, 0.0 + 0.5 * dx, 1.0 - 0.5 * dx, 0.0 + 0.5 * dy, 1.0 - 0.5 * dy, 0.0, 0.0); CHKERRQ(ierr); 
 
-	
+	// Setup element properties 
+	ierr = DMCreateGlobalVector(*da_prop, &properties); CHKERRQ(ierr);
+	ierr = DMCreateLocalVector(*da_prop, &l_properties); CHKERRQ(ierr); 
+	ierr = DMDAVecGetArray(*da_prop, l_properties, &elementProperties); CHKERRQ(ierr);
+
+	ierr = DMGetCoordinateDM(*da_prop, &prop_cda); CHKERRQ(ierr); 
+	ierr = DMGetCoordinatesLocal(*da_prop, &prop_coords); CHKERRQ(ierr); 
+	ierr = DMDAVecGetArray(prop_cda, prop_coords, &_prop_coords); CHKERRQ(ierr);
+
+	ierr = DMGetCoordinateDM(*da_u, &u_cda); CHKERRQ(ierr);
+	ierr = DMGetCoordinatesLocal(*da_u, &u_coords); CHKERRQ(ierr); 
+	ierr = DMDAVecGetArray(u_cda, u_coords, &_u_coords); CHKERRQ(ierr);
+
+	ierr = DMDAGetGhostCorners(prop_cda, &si, &sj, 0, &ni, &nj, 0); CHKERRQ(ierr);
+	for (j = sj; j < sj+nj; ++j)
+		for (i = si; i < si+ni; ++i)
+		{
+			PetscInt 	ngp;
+			PetscScalar	gp_xi[GAUSS_POINTS][DIM], gp_weights[GAUSS_POINTS];
+			PetscScalar	el_coords[DIM*NODES_PER_ELEMENT];
+			PetscInt	p;
+
+			ierr = GetElementCoords(_u_coords, i, j, el_coords);  CHKERRQ(ierr);
+			ierr = ConstructGaussQuadrature(&ngp, gp_xi, gp_weights); CHKERRQ(ierr); 
+
+			for (p = 0; p < GAUSS_POINTS; ++p)
+			{
+				PetscScalar	gp[DIM], xi_p[DIM], Ni_p[4];
+				PetscInt	d, n;
+				
+				// Gauss point coordinates
+				for (d = 0; d < DIM; ++d)
+				{
+					xi_p[d] = gp_xi[p][d];
+					gp[d] = 0.0;
+				}
+
+				ierr = ConstructQ12D_Ni(xi_p, Ni_p); CHKERRQ(ierr);
+
+				for (n = 0; n < NODES_PER_ELEMENT; ++n)
+					for (d = 0; d < DIM; ++d)
+						gp[d] += Ni_p[n] * el_coords[DIM*n+d];
+
+				for (d = 0; d < DIM; ++d)
+				{
+					elementProperties[j][i].gp_coords[DIM*p+d] = gp[d];
+					elementProperties[j][i].gp_weights[DIM*p+d] = gp_weights[d];
+				}
+
+				// Forcing term 
+				{
+					PetscScalar	f[DIM], x[DIM];
+					for (d = 0; d < DIM; ++d)
+						x[d] = elementProperties[j][i].gp_coords[DIM*p+d];
+
+					ierr = SetElementForcingTerm(x, f); CHKERRQ(ierr);
+
+					for (d = 0; d < DIM; ++d)
+						elementProperties[j][i].f[DIM*p+d] = f[d];
+				}
+					
+			}
+		}
 	return ierr;
 }
 
@@ -116,4 +185,60 @@ PetscErrorCode GetElementOwnershipRanges2d(DM da, PetscInt **lx, PetscInt **ly)
 	ierr = VecDestroy(&vly); CHKERRQ(ierr);
 
 	return ierr;
+}
+
+PetscErrorCode GetElementCoords(DMDACoor2d **_coords, PetscInt ei, PetscInt ej, PetscScalar el_coords[])
+{
+	PetscErrorCode 	ierr;
+
+	if (DIM*3+1 < 8) 
+	{
+		ierr = 0;
+	} else {
+		return 1;
+	}
+
+	el_coords[DIM*0+0] = _coords[ej][ei].x;			el_coords[DIM*0+1] = _coords[ej][ei].y;
+	el_coords[DIM*1+0] = _coords[ej+1][ei].x;		el_coords[DIM*1+1] = _coords[ej+1][ei].y;
+	el_coords[DIM*2+0] = _coords[ej+1][ei+1].x;		el_coords[DIM*2+1] = _coords[ej+1][ei+1].y;
+	el_coords[DIM*3+0] = _coords[ej][ei+1].x;		el_coords[DIM*3+1] = _coords[ej][ei+1].y;
+
+	return ierr;
+}
+
+PetscErrorCode ConstructGaussQuadrature(PetscInt *ngp, PetscScalar gp_xi[][2], PetscScalar gp_weights[])
+{
+	* ngp = 4;
+	gp_xi[0][0] = -0.57735026919;	gp_xi[0][1] = -0.57735026919;
+	gp_xi[1][0] = -0.57735026919;	gp_xi[1][1] =  0.57735026919;
+	gp_xi[2][0] =  0.57735026919;	gp_xi[2][1] =  0.57735026919;
+	gp_xi[3][0] =  0.57735026919;	gp_xi[3][1] = -0.57735026919;
+
+	gp_weights[0] = 1.0;
+	gp_weights[1] = 1.0;
+	gp_weights[2] = 1.0;
+	gp_weights[3] = 1.0;
+
+	return 0;
+}
+
+PetscErrorCode ConstructQ12D_Ni(PetscScalar _xi[2], PetscScalar Ni[4])
+{
+	PetscScalar xi = _xi[0];
+	PetscScalar eta = _xi[1];
+
+	Ni[0] = 0.25 * (1.0 - xi) * (1.0 - eta);	
+	Ni[1] = 0.25 * (1.0 - xi) * (1.0 + eta);	
+	Ni[2] = 0.25 * (1.0 + xi) * (1.0 + eta);	
+	Ni[3] = 0.25 * (1.0 + xi) * (1.0 - eta);	
+
+	return 0;
+}
+
+PetscErrorCode SetElementForcingTerm(PetscScalar x[DIM], PetscScalar f[DIM])
+{
+	f[0] = sin(x[0])*cos(x[1]);
+	f[1] = f[0]*sin(x[1]);
+
+	return 0;
 }
