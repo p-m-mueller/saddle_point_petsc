@@ -6,6 +6,6 @@
 
 PetscErrorCode SolveSaddlePointProblem(PetscInt, PetscInt); 
 
-PetscErrorCode SolveConstraintLaplaceProblem(DM, DM, Vec *);
+PetscErrorCode SolveConstraintLaplaceProblem(DM, Vec, DM, Vec *);
 
 #endif
