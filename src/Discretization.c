@@ -112,6 +112,13 @@ PetscErrorCode SetupDMs(PetscInt nx, PetscInt ny, DM *da_u, DM *da_prop)
 					
 			}
 		}
+	ierr = DMDAVecRestoreArray(prop_cda, prop_coords, &_prop_coords); CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(u_cda, u_coords, &_u_coords); CHKERRQ(ierr);
+
+	ierr = DMDAVecRestoreArray(*da_prop, l_properties, &elementProperties); CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(*da_prop, l_properties, ADD_VALUES, properties); CHKERRQ(ierr); 
+	ierr = DMLocalToGlobalEnd(*da_prop, l_properties, ADD_VALUES, properties); CHKERRQ(ierr); 
+
 	return ierr;
 }
 
@@ -242,3 +249,36 @@ PetscErrorCode SetElementForcingTerm(PetscScalar x[DIM], PetscScalar f[DIM])
 
 	return 0;
 }
+
+PetscErrorCode AssembleOperator_Laplace(DM da_u, DM da_prop, Mat *A)
+{
+	
+	PetscErrorCode 	ierr;
+
+	return ierr;	
+}
+
+PetscErrorCode AssembleRHS_Laplace(DM da_u, DM da_prop, Vec *f)
+{
+	PetscErrorCode 	ierr;
+
+	return ierr;	
+}
+
+
+PetscErrorCode AssembleOperator_Constraints(DM da_u, DM da_prop, Mat *B)
+{
+	
+	PetscErrorCode 	ierr;
+
+	return ierr;	
+}
+
+PetscErrorCode AssembleRHS_Constraints(DM da_u, DM da_prop, Vec *g)
+{
+	PetscErrorCode 	ierr;
+
+	return ierr;	
+}
+
+

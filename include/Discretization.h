@@ -32,4 +32,10 @@ PetscErrorCode ConstructQ12D_Ni(PetscScalar *, PetscScalar *);
 
 PetscErrorCode SetElementForcingTerm(PetscScalar *, PetscScalar *);
 
+PetscErrorCode AssembleOperator_Laplace(DM, DM, Mat *); 
+PetscErrorCode AssembleRHS_Laplace(DM, DM, Vec *); 
+
+PetscErrorCode AssembleOperator_Constraints(DM, DM, Mat *); 
+PetscErrorCode AssembleRHS_Constraints(DM, DM, Vec *);
+
 #endif
