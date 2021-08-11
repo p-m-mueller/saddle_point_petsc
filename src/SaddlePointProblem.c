@@ -11,7 +11,7 @@ PetscErrorCode SolveSaddlePointProblem(PetscInt nx, PetscInt ny)
 	Vec		properties, u;
 	PetscErrorCode 	ierr;
 
-	ierr = SetupDMs(nx, ny, &da_u, &da_prop, &properties); CHKERRQ(ierr);
+	ierr = SetupDMDA(nx, ny, &da_u); CHKERRQ(ierr);
 
 	ierr = DMCreateGlobalVector(da_u, &u); CHKERRQ(ierr);
 
@@ -50,8 +50,9 @@ PetscErrorCode SolveConstraintLaplaceProblem(DM da_prop, Vec properties, DM da_u
 	ierr = VecCreate(PETSC_COMM_WORLD, &g); CHKERRQ(ierr);
 	ierr = VecSetSizes(g, PETSC_DECIDE, 4); CHKERRQ(ierr);
 	*/
-	ierr = AssembleOperator_Laplace(da_u, da_prop, properties, &A); CHKERRQ(ierr);
-	ierr = AssembleRHS_Laplace(da_u, da_prop, properties, &f); CHKERRQ(ierr);
+	ierr = AssembleOperator_Laplace(da_u, &A); CHKERRQ(ierr);
+	ierr = AssembleRHS_Laplace(da_u, &f); CHKERRQ(ierr);
+	ierr = ApplyBC_Laplace(da_u, &A, &f); CHKERRQ(ierr); 
 	/*
 	ierr = AssembleOperator_Constraints(da_u, da_prop, &B); CHKERRQ(ierr);
 	ierr = AssembleRHS_Constraints(da_u, da_prop, &g); CHKERRQ(ierr);
@@ -66,7 +67,6 @@ PetscErrorCode SolveConstraintLaplaceProblem(DM da_prop, Vec properties, DM da_u
 	ierr = KSPSetUp(ksp);
 
 	ierr = KSPSolve(ksp, f, *u); CHKERRQ(ierr);
-
 
 	ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
 

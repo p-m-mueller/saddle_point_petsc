@@ -21,13 +21,11 @@ typedef struct
 }ElementProperties;
 
 
-PetscErrorCode SetupDMs(PetscInt, PetscInt, DM *, DM *, Vec *);
-
-PetscErrorCode GetElementOwnershipRanges2d(DM, PetscInt**, PetscInt**); 
+PetscErrorCode SetupDMDA(PetscInt, PetscInt, DM *);
 
 PetscErrorCode GetElementCoords(DMDACoor2d **, PetscInt, PetscInt, PetscScalar []);
 
-PetscErrorCode ConstructGaussQuadrature(PetscInt *, PetscScalar [][DIM], PetscScalar []);
+PetscErrorCode ConstructGaussQuadratureQ12D(PetscInt *, PetscScalar [][DIM], PetscScalar []);
 
 PetscErrorCode ConstructQ12D_Ni(PetscScalar [DIM], PetscScalar [NODES_PER_ELEMENT]); 
 
@@ -35,8 +33,9 @@ PetscErrorCode ConstructQ12D_GNi(PetscScalar [DIM], PetscScalar [][NODES_PER_ELE
 
 PetscErrorCode ConstructQ12D_GNx(PetscScalar [][NODES_PER_ELEMENT], PetscScalar *, PetscScalar [][NODES_PER_ELEMENT], PetscScalar *);
 
-PetscErrorCode AssembleOperator_Laplace(DM, DM, Vec, Mat *); 
-PetscErrorCode AssembleRHS_Laplace(DM, DM, Vec, Vec *); 
+PetscErrorCode AssembleOperator_Laplace(DM, Mat *); 
+PetscErrorCode AssembleRHS_Laplace(DM, Vec *); 
+PetscErrorCode ApplyBC_Laplace(DM, Mat *, Vec *); 
 
 PetscErrorCode AssembleOperator_Constraints(DM, DM, Mat *); 
 PetscErrorCode AssembleRHS_Constraints(DM, DM, Vec *);
@@ -45,7 +44,7 @@ PetscErrorCode FormStressOperatorQ12D(PetscScalar *, PetscScalar *, PetscScalar 
 
 PetscErrorCode FormLaplaceRHSQ12D(PetscScalar *, PetscErrorCode(*)(PetscScalar*, PetscScalar*), PetscScalar *); 
 
-static PetscErrorCode DMDAGetElementEqnums(PetscInt, PetscInt, MatStencil [NODES_PER_ELEMENT*U_DOF]);
+PetscErrorCode DMDAGetElementEqnums(PetscInt, PetscInt, MatStencil [NODES_PER_ELEMENT*U_DOF]);
 
 PetscErrorCode FormRHS(PetscScalar *, PetscScalar *);
 
