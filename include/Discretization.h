@@ -20,6 +20,10 @@ typedef struct
 	PetscScalar	gp_weights[GAUSS_POINTS];
 }ElementProperties;
 
+typedef struct
+{
+	PetscScalar	Ux, Uy;
+}Field;
 
 PetscErrorCode SetupDMDA(PetscInt, PetscInt, DM *);
 

@@ -1,5 +1,5 @@
 #include "SaddlePointProblem.h"
-
+#include <petscviewerhdf5.h>
 
 /*
  * Input:	nx	PetscInt, the number of elements in x direction
@@ -7,19 +7,17 @@
  */
 PetscErrorCode SolveSaddlePointProblem(PetscInt nx, PetscInt ny)
 {
-	DM		da_u, da_prop;
-	Vec		properties, u;
+	DM		da_u;
+	Vec		u;
 	PetscErrorCode 	ierr;
 
 	ierr = SetupDMDA(nx, ny, &da_u); CHKERRQ(ierr);
 
 	ierr = DMCreateGlobalVector(da_u, &u); CHKERRQ(ierr);
 
-	ierr = SolveConstraintLaplaceProblem(da_prop, properties, da_u, &u); CHKERRQ(ierr);
+	ierr = SolveConstraintLaplaceProblem(da_u, &u); CHKERRQ(ierr);
 
 	ierr = VecViewFromOptions(u, NULL, "-solution_view"); CHKERRQ(ierr);
-
-
 	return ierr;
 }
 
@@ -30,7 +28,7 @@ PetscErrorCode SolveSaddlePointProblem(PetscInt nx, PetscInt ny)
  * Output:
  * 		u		Vec that contains the solution data
  */
-PetscErrorCode SolveConstraintLaplaceProblem(DM da_prop, Vec properties, DM da_u, Vec *u)
+PetscErrorCode SolveConstraintLaplaceProblem(DM da_u, Vec *u)
 {
 	KSP		ksp;
 	Mat		A, B;

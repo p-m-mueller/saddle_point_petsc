@@ -5,10 +5,12 @@ add_executable(saddle_point_run ${sources})
 target_link_libraries(saddle_point_run PUBLIC
 	m
 	MPI::MPI_C
+	hdf5::hdf5
 	${PETSC_LIBRARIES}
 )
 
 target_include_directories(saddle_point_run PUBLIC 
 	"${CMAKE_SOURCE_DIR}/include"
 	${PETSC_INCLUDE_DIR}
+	${HDF5_C_INCLUDE_DIRS}
 )

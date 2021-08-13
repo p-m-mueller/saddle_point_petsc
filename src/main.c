@@ -3,7 +3,6 @@ static const char help[] = "Solves a example saddlepoint problem with the 2D Poi
 #include <petsc.h>
 #include "SaddlePointProblem.h"
 
-extern PetscErrorCode SolveSaddlePointProblem(PetscInt, PetscInt);
 
 int main(int argc, char **argv)
 {
@@ -12,7 +11,7 @@ int main(int argc, char **argv)
 
 	ierr = PetscInitialize(&argc, &argv, (char*)0, help); if (ierr) return ierr;	
 
-	Nx = 1; Ny = 1;
+	Nx = 10; Ny = 10;
 	ierr = SolveSaddlePointProblem(Nx, Ny); CHKERRQ(ierr);
 
 	ierr = PetscFinalize(); CHKERRQ(ierr);

@@ -14,4 +14,6 @@ find_package(PETSC 3.7 REQUIRED)
 
 find_package(MPI 3.0 REQUIRED)
 
+find_package(HDF5 1.10 REQUIRED)
+
 add_subdirectory(src)

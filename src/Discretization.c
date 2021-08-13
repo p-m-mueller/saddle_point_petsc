@@ -169,7 +169,7 @@ PetscErrorCode AssembleRHS_Laplace(DM da_u, Vec *f)
 	Vec		coords;
 	DMDACoor2d	**_coords;
 	Vec		l_f;
-	PetscScalar	**_f;
+	Field		**_f;
 	PetscInt	si, sj, ni, nj;
 	PetscInt	i, j;
 	PetscScalar	Fe[U_DOF*NODES_PER_ELEMENT];
@@ -189,8 +189,8 @@ PetscErrorCode AssembleRHS_Laplace(DM da_u, Vec *f)
 		for (i = si; i < si+ni; ++i)
 		{
 			PetscScalar 	el_coords[DIM*GAUSS_POINTS];
-			MatStencil 	u_eqn[NODES_PER_ELEMENT*U_DOF];
-			PetscInt	n, c;
+			MatStencil 	idxm[NODES_PER_ELEMENT*U_DOF];
+			PetscInt	n;
 
 			ierr = GetElementCoords(_coords, i, j, el_coords); CHKERRQ(ierr);	
 			
@@ -198,17 +198,15 @@ PetscErrorCode AssembleRHS_Laplace(DM da_u, Vec *f)
 
 			ierr = FormLaplaceRHSQ12D(el_coords, FormRHS, Fe); CHKERRQ(ierr);
 		
-			ierr = DMDAGetElementEqnums(i, j, u_eqn); CHKERRQ(ierr);			
+			ierr = DMDAGetElementEqnums(i, j, idxm); CHKERRQ(ierr);			
 			for (n = 0; n < NODES_PER_ELEMENT; ++n)
-				for (c = 0; c < U_DOF; ++c)
-					_f[u_eqn[U_DOF*n+c].j][u_eqn[DIM*n+c].i] += Fe[U_DOF*n+c];
+			{
+				_f[idxm[U_DOF*n+0].j][idxm[DIM*n+0].i].Ux += Fe[U_DOF*n+0];
+				_f[idxm[U_DOF*n+1].j][idxm[DIM*n+1].i].Uy += Fe[U_DOF*n+1];
+			}
 		}
 	
-
 	ierr = DMDAVecRestoreArray(da_u, l_f, &_f); CHKERRQ(ierr);
-
-	ierr = VecView(l_f, PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-	
 	ierr = DMLocalToGlobalBegin(da_u, l_f, ADD_VALUES, *f); CHKERRQ(ierr);
 	ierr = DMLocalToGlobalEnd(da_u, l_f, ADD_VALUES, *f); CHKERRQ(ierr);
 	ierr = DMRestoreLocalVector(da_u, &l_f); CHKERRQ(ierr);
@@ -222,20 +220,48 @@ PetscErrorCode AssembleRHS_Laplace(DM da_u, Vec *f)
 
 PetscErrorCode ApplyBC_Laplace(DM da_u, Mat *A, Vec *f)
 {
-	DM		cda;
-	Vec		coords;
-	DMDACoor2d	**_coords;
-	PetscInt	si, sj, ni, nj;
-	PetscInt	i, j;
-	PetscErrorCode 	ierr;
+	DMDALocalInfo		info;
+	PetscInt		nbnd;
+	PetscInt		i, j, d;
+	ISLocalToGlobalMapping	ltogm;
+	const PetscInt		*gIdx;
+	PetscInt		ngIdx;
+	PetscInt		nbcIds, ibcId;
+	PetscInt		*bcIds_g;
+	PetscScalar		*u_bc;
+	PetscErrorCode 		ierr;
 
-	ierr = DMGetCoordinateDM(da_u, &cda); CHKERRQ(ierr);
-	ierr = DMGetCoordinatesLocal(da_u, &coords); CHKERRQ(ierr);	
-	ierr = DMDAVecGetArray(cda, coords, &_coords); CHKERRQ(ierr); 
-	
+	ierr = DMDAGetLocalInfo(da_u, &info); CHKERRQ(ierr);
+	nbcIds = 0;
+	for (j = info.ys; j < info.ys+info.ym; ++j)
+		for (i = info.xs; i < info.xs+info.xm; ++i)
+			if (i == 0 || i == info.mx-1 || j == 0 || j == info.my-1)
+				nbcIds += info.dof;
+
+	ierr = PetscMalloc1(nbcIds, &bcIds_g); CHKERRQ(ierr);
+	ierr = PetscMalloc1(nbcIds, &u_bc); CHKERRQ(ierr);
+
+	ibcId = 0;
+	for (j = info.ys; j < info.ys+info.ym; ++j)
+		for (i = info.xs; i < info.xs+info.xm; ++i)
+			if (i == 0 || i == info.mx-1 || j == 0 || j == info.my-1)
+				for (d = 0; d < info.dof; ++d)
+				{
+					bcIds_g[ibcId] = (j*info.xm+i)*info.dof+d;
+					u_bc[ibcId] = 0.0;
+					ibcId++;
+				}
+
+
+	ierr = VecSetValues(*f, nbcIds, bcIds_g, u_bc, INSERT_VALUES); CHKERRQ(ierr);
+	ierr = VecAssemblyBegin(*f); CHKERRQ(ierr);
+	ierr = VecAssemblyEnd(*f); CHKERRQ(ierr);
+
+	ierr = MatZeroRowsColumns(*A, nbcIds, bcIds_g, 1.0, NULL, NULL); CHKERRQ(ierr);
 		
+	ierr = PetscFree(bcIds_g); CHKERRQ(ierr);
+	ierr = PetscFree(u_bc); CHKERRQ(ierr);
 
-	ierr = DMDAVecRestoreArray(cda, coords, &_coords); CHKERRQ(ierr);
 	return ierr;
 }
 
@@ -363,6 +389,6 @@ PetscErrorCode DMDAGetElementEqnums(PetscInt i, PetscInt j, MatStencil u_eqn[NOD
 PetscErrorCode FormRHS(PetscScalar *x, PetscScalar *f_p)
 {
 	f_p[0] = 1.0; //sin(x[0])*cos(x[1]);
-	f_p[1] = 1.0;	
+	f_p[1] = 2.0;	
 	return 0;
 }
