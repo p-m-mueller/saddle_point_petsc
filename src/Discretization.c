@@ -15,6 +15,7 @@ PetscErrorCode SetupDMDA(PetscInt nx, PetscInt ny, DM *da_u)
 	 * Create the da for u
 	 */
 	ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX, nx+1, ny+1, PETSC_DECIDE, PETSC_DECIDE, dof_u, 1, NULL, NULL, da_u); CHKERRQ(ierr);
+	//ierr = DMPlexCreateBoxMesh(PETSC_COMM_WORLD, 2, PETSC_TRUE, NULL, NULL, NULL, NULL, PETSC_TRUE, da_u); CHKERRQ(ierr);
 	ierr = DMSetMatType(*da_u, MATAIJ); CHKERRQ(ierr);
 	ierr = DMSetFromOptions(*da_u); CHKERRQ(ierr);
 	ierr = DMSetUp(*da_u); CHKERRQ(ierr);
@@ -29,11 +30,18 @@ PetscErrorCode SetupDMDA(PetscInt nx, PetscInt ny, DM *da_u)
 
 PetscErrorCode GetElementCoords(DMDACoor2d **_coords, PetscInt ei, PetscInt ej, PetscScalar *el_coords)
 {
+	PetscInt	k;
+	for (k = 0; k < NODES_PER_ELEMENT; ++k)
+	{
+			el_coords[k*DIM+0] = _coords[ej][ei].x;
+			el_coords[k*DIM+1] = _coords[ej][ei].y;
+	}
+	/*
 	el_coords[DIM*0+0] = _coords[ej][ei].x;			el_coords[DIM*0+1] = _coords[ej][ei].y;
 	el_coords[DIM*1+0] = _coords[ej+1][ei].x;		el_coords[DIM*1+1] = _coords[ej+1][ei].y;
 	el_coords[DIM*2+0] = _coords[ej+1][ei+1].x;		el_coords[DIM*2+1] = _coords[ej+1][ei+1].y;
 	el_coords[DIM*3+0] = _coords[ej][ei+1].x;		el_coords[DIM*3+1] = _coords[ej][ei+1].y;
-
+	*/
 	return 0;
 }
 

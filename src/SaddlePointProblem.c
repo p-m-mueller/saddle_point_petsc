@@ -1,5 +1,5 @@
 #include "SaddlePointProblem.h"
-#include <petscviewerhdf5.h>
+#include "Visualization.h"
 
 /*
  * Input:	nx	PetscInt, the number of elements in x direction
@@ -18,6 +18,9 @@ PetscErrorCode SolveSaddlePointProblem(PetscInt nx, PetscInt ny)
 	ierr = SolveConstraintLaplaceProblem(da_u, &u); CHKERRQ(ierr);
 
 	ierr = VecViewFromOptions(u, NULL, "-solution_view"); CHKERRQ(ierr);
+
+	ierr = WriteVTK(da_u, u, "test.vtk"); CHKERRQ(ierr);
+
 	return ierr;
 }
 
