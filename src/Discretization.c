@@ -1,29 +1,37 @@
 #include "Discretization.h"
 
-PetscErrorCode SetupDMDA(PetscInt nx, PetscInt ny, DM *da_u)
+PetscErrorCode CreateMesh(MPI_Comm comm, const char *filename, DM *da)
 {
 	const PetscInt 	dof_u = 2;
-	PetscInt	nProc_x, nProc_y;
-	PetscInt	M, N;
-	PetscReal	dx, dy;
-	DM		u_cda;
-	Vec		u_coords;
-	DMDACoor2d	**_u_coords;
+	size_t 		len;
 	PetscErrorCode	ierr;
 
-	/*
-	 * Create the da for u
-	 */
-	ierr = DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DMDA_STENCIL_BOX, nx+1, ny+1, PETSC_DECIDE, PETSC_DECIDE, dof_u, 1, NULL, NULL, da_u); CHKERRQ(ierr);
-	//ierr = DMPlexCreateBoxMesh(PETSC_COMM_WORLD, 2, PETSC_TRUE, NULL, NULL, NULL, NULL, PETSC_TRUE, da_u); CHKERRQ(ierr);
-	ierr = DMSetMatType(*da_u, MATAIJ); CHKERRQ(ierr);
-	ierr = DMSetFromOptions(*da_u); CHKERRQ(ierr);
-	ierr = DMSetUp(*da_u); CHKERRQ(ierr);
-
-	ierr = DMDASetFieldName(*da_u, 0, "Ux"); CHKERRQ(ierr);
-	ierr = DMDASetFieldName(*da_u, 1, "Uy"); CHKERRQ(ierr);
-	ierr = DMDASetUniformCoordinates(*da_u, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0); CHKERRQ(ierr);
+	ierr = PetscStrlen(filename, &len); CHKERRQ(ierr);
 	
+	if (len)
+	{
+		ierr = DMPlexCreateFromFile(comm, filename, PETSC_TRUE, da); CHKERRQ(ierr);
+	} else {
+		ierr = DMPlexCreateBoxMesh(comm, 2, PETSC_TRUE, NULL, NULL, NULL, NULL, PETSC_TRUE, da); CHKERRQ(ierr);
+	}
+	ierr = DMSetFromOptions(*da); CHKERRQ(ierr);
+	
+	return ierr;
+}
+
+PetscErrorCode SetupFields(DM *da)
+{
+	PetscSection 	sect;
+	PetscInt 	pStart, pEnd;
+	PetscInt	v, vStart, vEnd;
+	PetscErrorCode	ierr;
+
+	ierr = DMPlexGetChart(*da, &pStart, &pEnd); CHKERRQ(ierr);
+	ierr = DMPlexGetHeightStratum(*da, 2, &vStart, &vEnd); CHKERRQ(ierr);
+	ierr = PetscSectionSetChart(sect, pStart, pEnd); CHKERRQ(ierr);
+	for (v = vStart; v < vEnd; ++v)
+		PetscSectionSetDof(sect, v, 1);
+
 	return ierr;
 }
 

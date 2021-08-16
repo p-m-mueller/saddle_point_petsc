@@ -6,13 +6,12 @@ static const char help[] = "Solves a example saddlepoint problem with the 2D Poi
 
 int main(int argc, char **argv)
 {
-	PetscInt 	Nx, Ny;
+	PetscReal	Lx, Ly, dim;
 	PetscErrorCode 	ierr;
 
 	ierr = PetscInitialize(&argc, &argv, (char*)0, help); if (ierr) return ierr;	
 
-	Nx = 3; Ny = 3;
-	ierr = SolveSaddlePointProblem(Nx, Ny); CHKERRQ(ierr);
+	ierr = SolveSaddlePointProblem(""); CHKERRQ(ierr);
 
 	ierr = PetscFinalize(); CHKERRQ(ierr);
 	return ierr;

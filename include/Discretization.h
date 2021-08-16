@@ -25,7 +25,9 @@ typedef struct
 	PetscScalar	Ux, Uy;
 }Field;
 
-PetscErrorCode SetupDMDA(PetscInt, PetscInt, DM *);
+PetscErrorCode CreateMesh(MPI_Comm, const char *, DM *);
+
+PetscErrorCode SetupFields(DM *);
 
 PetscErrorCode GetElementCoords(DMDACoor2d **, PetscInt, PetscInt, PetscScalar []);
 

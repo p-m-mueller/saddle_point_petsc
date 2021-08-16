@@ -4,7 +4,7 @@
 #include <petsc.h>
 #include "Discretization.h"
 
-PetscErrorCode SolveSaddlePointProblem(PetscInt, PetscInt); 
+PetscErrorCode SolveSaddlePointProblem(const char *); 
 
 PetscErrorCode SolveConstraintLaplaceProblem(DM, Vec *);
 
