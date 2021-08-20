@@ -16,3 +16,17 @@ PetscErrorCode InvertMatrix2x2(const PetscScalar *A, PetscScalar *invA)
 
 	return 0;
 }
+
+PetscErrorCode Transform(const PetscInt dim, const PetscReal *J, const PetscReal *v, PetscReal *Jv)
+{
+	PetscInt i, j;
+	
+	for (i = 0; i < dim; ++i)
+	{
+		Jv[i] = 0.0;
+		for (j = 0; j < dim; ++j)
+			Jv[i] += J[i*dim+j] * v[j];
+	}		
+
+	return 0;
+}

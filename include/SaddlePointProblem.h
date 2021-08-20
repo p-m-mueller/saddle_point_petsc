@@ -6,6 +6,6 @@
 
 PetscErrorCode SolveSaddlePointProblem(const char *); 
 
-PetscErrorCode SolveConstraintLaplaceProblem(Mesh, Vec *);
+PetscErrorCode SolveConstraintLaplaceProblem(Mesh *, Vec *);
 
 #endif

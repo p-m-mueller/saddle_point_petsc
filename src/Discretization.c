@@ -114,12 +114,16 @@ PetscErrorCode MeshSetupGeometry(Mesh *mesh)
 		PetscInt	i, j;
 
 		ierr = DMPlexPointLocalRef(mesh->dmCell, c, triag, &tg); CHKERRQ(ierr);
+
 		ierr = DMPlexVecGetClosure(mesh->dm, coordSect, coordinates, c, &numCoords, &coords); CHKERRQ(ierr);
-		printf("%d %d\n", c, numCoords);
+
+		tg->numCoords = numCoords;
+		tg->coords = coords;
+
 		if (numCoords == 6)
 		{
 			const PetscInt 	dim = 2;
-			
+		
 			for (i = 0; i < dim; ++i) 
 				tg->v[i] = PetscRealPart(coords[i]);
 
@@ -131,7 +135,9 @@ PetscErrorCode MeshSetupGeometry(Mesh *mesh)
 
 			ierr = InvertMatrix2x2(tg->J, tg->invJ); CHKERRQ(ierr);
 
+
 		} else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "The number of coordinates for a triangle 6");
+		ierr = DMPlexVecRestoreClosure(mesh->dm, coordSect, coordinates, c, &numCoords, &coords); CHKERRQ(ierr);
 	}
 
 	ierr = VecRestoreArray(mesh->triangles, &triag); CHKERRQ(ierr);
@@ -141,7 +147,7 @@ PetscErrorCode MeshSetupGeometry(Mesh *mesh)
 PetscErrorCode MeshDestroy(Mesh *mesh)
 {
 	PetscErrorCode 	ierr;
-
+	
 	ierr = VecDestroy(&mesh->triangles); CHKERRQ(ierr);
 	ierr = DMDestroy(&mesh->dm); CHKERRQ(ierr);
 	ierr = DMDestroy(&mesh->dmCell); CHKERRQ(ierr);
@@ -149,26 +155,39 @@ PetscErrorCode MeshDestroy(Mesh *mesh)
 	return ierr;
 }
 
-PetscErrorCode AssembleOperator_Laplace(Mesh mesh, Mat *A)
+PetscErrorCode AssembleOperator_Laplace(Mesh *mesh, Mat *A)
 {
-	PetscInt		c, cStart, cEnd;
-	PetscInt		dim;
-	DM			cdm;
+	PetscSection		coordSect;
 	Vec			coordinates;
-	const PetscScalar	*coords;
+	PetscInt		c, cStart, cEnd;
+	PetscScalar		*triag;
+	PetscReal		*Ke;
 	PetscErrorCode 		ierr;
 
-	ierr = DMGetCoordinateDim(mesh.dm, &dim); CHKERRQ(ierr);
-	ierr = DMPlexGetHeightStratum(mesh.dm, 0, &cStart, &cEnd); CHKERRQ(ierr);
+	ierr = DMGetCoordinateSection(mesh->dm, &coordSect); CHKERRQ(ierr);
+	ierr = DMGetCoordinatesLocal(mesh->dm, &coordinates); CHKERRQ(ierr);
 
-	PetscScalar	*triag;
-	ierr = VecGetArray(mesh.triangles, &triag);
+	ierr = DMPlexGetHeightStratum(mesh->dm, 0, &cStart, &cEnd); CHKERRQ(ierr);
+
+	ierr = VecGetArray(mesh->triangles, &triag);
 
 	for (c = cStart; c < cEnd; ++c)
 	{	
-		Triangle *tg;
-		ierr = DMPlexPointLocalRef(mesh.dmCell, c, triag, &tg); CHKERRQ(ierr);
-		int dim = 2;
+		Triangle 	*tg;
+		PetscReal	*coords = NULL;
+		PetscInt	numCoords = 0;
+
+		ierr = DMPlexPointLocalRead(mesh->dmCell, c, triag, &tg); CHKERRQ(ierr);
+		ierr = DMPlexVecGetClosure(mesh->dm, coordSect, coordinates, c, &numCoords, &coords); CHKERRQ(ierr);
+
+		if (numCoords == 6)
+		{	
+			const PetscInt	dim = 2;
+			PetscReal	Ke[(dim+1)*(dim+1)];
+
+			ierr = ElementStiffnesMatrix(mesh, tg, Ke); CHKERRQ(ierr);
+		}
+		ierr = DMPlexVecRestoreClosure(mesh->dm, coordSect, coordinates, c, &numCoords, &coords); CHKERRQ(ierr);
 	}
 
 	return ierr;	
@@ -248,4 +267,34 @@ PetscErrorCode GradPhi(const PetscInt i, const PetscScalar *x, PetscScalar *grad
 	
 	}	
 	return 0;
+}
+
+PetscErrorCode ElementStiffnesMatrix(Mesh *mesh, Triangle *tg, PetscReal *Ke)
+{
+	PetscInt	dim = mesh->dim;;
+	PetscInt	nqp = tg->numQuadPoints;
+	PetscReal	x[dim*nqp];
+	PetscReal	gradPhi_i[dim*nqp], DTgradPhi_i[dim*nqp];
+	PetscReal	gradPhi_j[dim*nqp], DTgradPhi_j[dim*nqp];
+
+	PetscInt	n, d, i, j;
+	PetscErrorCode 	ierr;
+	
+	for (i = 0; i < dim+1; ++i)
+		for (j = 0; j < dim+1; ++j)
+			for (n = 0; n < nqp; ++n)
+			{
+				PetscReal *x = &tg->coords[n*dim+d];
+
+				ierr =  GradPhi(i, x, gradPhi_i); CHKERRQ(ierr);
+				ierr = Transform(dim, tg->J, gradPhi_i, DTgradPhi_i); CHKERRQ(ierr);
+
+				ierr = GradPhi(j, x, gradPhi_j); CHKERRQ(ierr);
+				ierr = Transform(dim, tg->J, gradPhi_j, DTgradPhi_j); CHKERRQ(ierr);
+			
+				Ke[i*(dim+1)+j] = 0.0;
+				for (d = 0; d < dim; ++d)
+					Ke[i*(dim+1)+j] += DTgradPhi_i[d] * DTgradPhi_j[d];
+			}
+	return ierr;
 }

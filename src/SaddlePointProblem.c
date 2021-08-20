@@ -11,7 +11,7 @@ PetscErrorCode SolveSaddlePointProblem(const char *filename)
 	
 	ierr = DMGetGlobalVector(mesh.dm, &u); CHKERRQ(ierr);
 	
-	ierr = SolveConstraintLaplaceProblem(mesh, &u); CHKERRQ(ierr);
+	ierr = SolveConstraintLaplaceProblem(&mesh, &u); CHKERRQ(ierr);
 
 	ierr = VecViewFromOptions(u, NULL, "-solution_view"); CHKERRQ(ierr);
 	
@@ -24,7 +24,7 @@ PetscErrorCode SolveSaddlePointProblem(const char *filename)
 	return ierr;
 }
 
-PetscErrorCode SolveConstraintLaplaceProblem(Mesh mesh, Vec *u)
+PetscErrorCode SolveConstraintLaplaceProblem(Mesh *mesh, Vec *u)
 {
 	KSP		ksp;
 	Mat		A, B;
@@ -32,8 +32,8 @@ PetscErrorCode SolveConstraintLaplaceProblem(Mesh mesh, Vec *u)
 	PetscInt	nCols;
 	PetscErrorCode 	ierr;
 
-	ierr = DMCreateMatrix(mesh.dm, &A); CHKERRQ(ierr);
-	ierr = DMCreateGlobalVector(mesh.dm, &f); CHKERRQ(ierr); 
+	ierr = DMCreateMatrix(mesh->dm, &A); CHKERRQ(ierr);
+	ierr = DMCreateGlobalVector(mesh->dm, &f); CHKERRQ(ierr); 
 
 	/*
 	ierr = MatGetSize(A, NULL, &nCols); CHKERRQ(ierr);

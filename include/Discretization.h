@@ -1,5 +1,5 @@
-#ifndef _MESHFUNCTIONS_H_
-#define _MESHFUNCTIONS_H_
+#ifndef _DISCRETIZATION_H_
+#define _DISCRETIZATION_H_
 
 #include <petsc.h>
 #include "Utils.h"
@@ -13,13 +13,15 @@ typedef struct
 
 typedef struct
 {
-	PetscInt	corners[3];
+	PetscInt	numCoords;
+	PetscReal 	*coords;
 	PetscReal	v[2];
 	PetscReal	J[4];
 	PetscReal	invJ[4];
 	PetscReal	detJ;
-	PetscReal	quadPoint[2];
-	PetscReal	quadWeight;
+	PetscInt	numQuadPoints;	// Number of quadrature points
+	PetscReal	*quadPoints;	// Quadrature points
+	PetscReal	*quadWeight;	// Quadrature weights
 }Triangle;
 
 typedef struct
@@ -35,7 +37,7 @@ PetscErrorCode MeshSetupGeometry(Mesh *);
 
 PetscErrorCode MeshDestroy(Mesh *);
 
-PetscErrorCode AssembleOperator_Laplace(Mesh, Mat *); 
+PetscErrorCode AssembleOperator_Laplace(Mesh *, Mat *); 
 PetscErrorCode AssembleRHS_Laplace(DM, Vec *); 
 PetscErrorCode ApplyBC_Laplace(DM, Mat *, Vec *); 
 
@@ -48,5 +50,7 @@ PetscErrorCode FormLaplaceRHS(PetscScalar *, PetscErrorCode(*)(PetscScalar*, Pet
 
 PetscErrorCode Phi(const PetscInt, const PetscScalar *, PetscScalar *);
 PetscErrorCode GradPhi(const PetscInt, const PetscScalar *, PetscScalar *);
+
+PetscErrorCode ElementStiffnesMatrix(Mesh *, Triangle *, PetscReal *);
 
 #endif
