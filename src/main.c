@@ -11,7 +11,10 @@ int main(int argc, char **argv)
 
 	ierr = PetscInitialize(&argc, &argv, (char*)0, help); if (ierr) return ierr;	
 
-	ierr = SolveSaddlePointProblem(""); CHKERRQ(ierr);
+	//const char *filename = "../grids/unitsquare.msh";
+	//const char *filename = "../grids/circular_cutout.msh";
+	const char *filename = "";
+	ierr = SolveSaddlePointProblem(filename); CHKERRQ(ierr);
 
 	ierr = PetscFinalize(); CHKERRQ(ierr);
 	return ierr;

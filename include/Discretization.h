@@ -2,56 +2,51 @@
 #define _MESHFUNCTIONS_H_
 
 #include <petsc.h>
-
-
-#define GAUSS_POINTS 4
-#define DIM 2
-#define NODES_PER_ELEMENT 4
-#define U_DOF 2
+#include "Utils.h"
 
 typedef struct
 {
-	PetscInt i, j;
-}Index2d;
+	PetscInt	dim;
+	DM		dm, dmCell;
+	Vec		triangles;	// Vector of Triangles
+}Mesh;
 
-typedef struct 
+typedef struct
 {
-	PetscScalar 	gp_coords[DIM*GAUSS_POINTS];
-	PetscScalar	gp_weights[GAUSS_POINTS];
-}ElementProperties;
+	PetscInt	corners[3];
+	PetscReal	v[2];
+	PetscReal	J[4];
+	PetscReal	invJ[4];
+	PetscReal	detJ;
+	PetscReal	quadPoint[2];
+	PetscReal	quadWeight;
+}Triangle;
 
 typedef struct
 {
 	PetscScalar	Ux, Uy;
 }Field;
 
-PetscErrorCode CreateMesh(MPI_Comm, const char *, DM *);
+PetscErrorCode MeshCreate(MPI_Comm, const char *, Mesh *);
 
-PetscErrorCode SetupFields(DM *);
+PetscErrorCode MeshSetupSection(Mesh *);
 
-PetscErrorCode GetElementCoords(DMDACoor2d **, PetscInt, PetscInt, PetscScalar []);
+PetscErrorCode MeshSetupGeometry(Mesh *);
 
-PetscErrorCode ConstructGaussQuadratureQ12D(PetscInt *, PetscScalar [][DIM], PetscScalar []);
+PetscErrorCode MeshDestroy(Mesh *);
 
-PetscErrorCode ConstructQ12D_Ni(PetscScalar [DIM], PetscScalar [NODES_PER_ELEMENT]); 
-
-PetscErrorCode ConstructQ12D_GNi(PetscScalar [DIM], PetscScalar [][NODES_PER_ELEMENT]); 
-
-PetscErrorCode ConstructQ12D_GNx(PetscScalar [][NODES_PER_ELEMENT], PetscScalar *, PetscScalar [][NODES_PER_ELEMENT], PetscScalar *);
-
-PetscErrorCode AssembleOperator_Laplace(DM, Mat *); 
+PetscErrorCode AssembleOperator_Laplace(Mesh, Mat *); 
 PetscErrorCode AssembleRHS_Laplace(DM, Vec *); 
 PetscErrorCode ApplyBC_Laplace(DM, Mat *, Vec *); 
 
 PetscErrorCode AssembleOperator_Constraints(DM, DM, Mat *); 
 PetscErrorCode AssembleRHS_Constraints(DM, DM, Vec *);
 
-PetscErrorCode FormStressOperatorQ12D(PetscScalar *, PetscScalar *, PetscScalar *);
+PetscErrorCode FormStressOperator(PetscScalar *, PetscScalar *, PetscScalar *);
 
-PetscErrorCode FormLaplaceRHSQ12D(PetscScalar *, PetscErrorCode(*)(PetscScalar*, PetscScalar*), PetscScalar *); 
+PetscErrorCode FormLaplaceRHS(PetscScalar *, PetscErrorCode(*)(PetscScalar*, PetscScalar*), PetscScalar *); 
 
-PetscErrorCode DMDAGetElementEqnums(PetscInt, PetscInt, MatStencil [NODES_PER_ELEMENT*U_DOF]);
-
-PetscErrorCode FormRHS(PetscScalar *, PetscScalar *);
+PetscErrorCode Phi(const PetscInt, const PetscScalar *, PetscScalar *);
+PetscErrorCode GradPhi(const PetscInt, const PetscScalar *, PetscScalar *);
 
 #endif
